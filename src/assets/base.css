@@ -1,0 +1,21 @@
+.body {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    max-width: 100%;
+
+}
+
+.container{
+    max-width: 100%;
+}
+
+hr {
+    margin: 0;
+}
+
+@media (max-width:992px) {
+    .flex-phone-column{
+        flex-direction: column!important;
+    }
+}
