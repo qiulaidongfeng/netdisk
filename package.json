@@ -20,7 +20,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
     "critical": "^7.2.1",
-    "vite": "^7.1.7",
+    "vite": "^7.1.11",
     "vite-plugin-seo-prerender": "^1.0.0",
     "vite-plugin-vue-devtools": "^8.0.2"
   }
