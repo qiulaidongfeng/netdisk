@@ -110,7 +110,7 @@ func (m *mysqlFileDb) Get(id, path string) io.Reader {
 func (m *mysqlFileDb) Delete(id, path string) bool {
 	f := &fileEntry{Path: path}
 	err := db.Transaction(func(tx *gorm.DB) error {
-		result := tx.Scopes(tableForUser(id)).First(f)
+		result := tx.Scopes(tableForUser(id)).Clauses(clause.Locking{Strength: "UPDATE"}).First(f)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -118,13 +118,13 @@ func (m *mysqlFileDb) Delete(id, path string) bool {
 		// TODO: use SET -=
 		var u user
 		u.Id = id
-		result = tx.First(&u)
+		result = tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&u)
 		if result.Error != nil {
 			return result.Error
 		}
 
 		u.Used -= f.Size
-		result = tx.Model(&u).Where(&u).Update("used", u.Used)
+		result = tx.Model(&u).Where("id = ?", id).Update("used", u.Used)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -142,22 +142,36 @@ func (m *mysqlFileDb) Delete(id, path string) bool {
 	return true
 }
 
-func (m *mysqlFileDb) Set(id, path string, data io.Reader) bool {
-	var u user
-	u.Id = id
-	result := db.Select("limit").First(&u)
-	if result.Error != nil {
-		panic(result.Error)
-	}
+var errlimit = errors.New("")
+
+func (m *mysqlFileDb) Set(id, path string, data io.Reader) (ret bool) {
 	s, err := io.ReadAll(data)
 	if err != nil {
 		panic(err)
 	}
-	if u.Used+len(s) > u.Limit {
-		return false
-	}
 	err = db.Transaction(func(tx *gorm.DB) error {
-		result := tx.Model(&user{}).Where("id = ?", id).Update("used", u.Used+len(s))
+		var oldSize int
+		var existingFile fileEntry
+		err := tx.Scopes(tableForUser(id)).Where("path = ?", path).Clauses(clause.Locking{Strength: "UPDATE"}).Select("size").First(&existingFile).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		oldSize = existingFile.Size
+
+		var u user
+		u.Id = id
+		result := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("limit", "used").First(&u)
+		if result.Error != nil {
+			return result.Error
+		}
+
+		// 检查空间限制
+		newUsed := u.Used - oldSize + len(s)
+		if newUsed > u.Limit {
+			return errlimit
+		}
+
+		result = tx.Model(&user{}).Where("id = ?", id).Update("used", newUsed)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -166,10 +180,13 @@ func (m *mysqlFileDb) Set(id, path string, data io.Reader) bool {
 		f := &fileEntry{Path: path, Size: len(s), Data: s}
 		//文件不存在就保存，存在就修改
 		result = tx.Clauses(clause.OnConflict{
-			UpdateAll: true,
+			DoUpdates: clause.AssignmentColumns([]string{"updated_at", "size", "data"}), // 仅更新需要的字段
 		}).Create(f)
 		return result.Error
 	})
+	if err == errlimit {
+		return false
+	}
 	if err != nil {
 		panic(err)
 	}
