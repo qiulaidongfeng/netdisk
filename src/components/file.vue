@@ -3,6 +3,13 @@ import { ref } from 'vue';
 let list = ref();
 import { onMounted } from 'vue';
 
+function fmt(v) {
+  if ((v / 1024 / 1024) < 1) {
+    return (v / 1024).toFixed(2) + "kb"
+  }
+  return (v / 1024 / 1024).toFixed(2) + "Mb"
+}
+
 onMounted(() =>
     $.ajax({
         url: '/list',
@@ -24,7 +31,7 @@ onMounted(() =>
     <div v-for="(item, index) in list" :key="item.Path">
         <div class="d-flex justify-content-between">
             <p>{{ item.Path }}</p>
-            <p>{{ item.Size }}</p>
+            <p>{{ fmt(item.Size) }}</p>
         </div>
         <div class="d-flex justify-content-between flex-wrap">
             <a :href="`/download/${item.Path}/`" class="btn btn-primary">下载</a>
