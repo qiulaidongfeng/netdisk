@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/qiulaidongfeng/nonamevote/nonamevote"
+	"github.com/qiulaidongfeng/key"
 	"github.com/qiulaidongfeng/safesession"
 	"gorm.io/gorm"
 )
@@ -78,7 +78,7 @@ func login(ctx *gin.Context, userid, password string) (bool, string) {
 
 var sessionAge = 365 * 24 * time.Hour
 
-var sessionControl = safesession.NewControl(nonamevote.GetAeskey(), sessionAge, 0, func(clientIp string) safesession.IPInfo {
+var sessionControl = safesession.NewControl(key.Encrypt, key.Decrypt, sessionAge, 0, func(clientIp string) safesession.IPInfo {
 	//TODO:实现这里
 	return safesession.IPInfo{}
 }, safesession.DB{
