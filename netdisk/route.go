@@ -3,6 +3,8 @@ package netdisk
 import (
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -103,7 +105,13 @@ func Route(s *gin.Engine) {
 
 		filedb := new_fileDb()
 
-		if !filedb.Set(id, f.Filename, src) {
+		path := ctx.Query("path")
+		if path == "" {
+			ctx.String(http.StatusBadRequest, "没有 path")
+			return
+		}
+
+		if !filedb.Set(id, path, src) {
 			ctx.String(http.StatusForbidden, "上传文件太大，超出您的可用剩余空间上限！")
 		}
 	})
@@ -135,14 +143,9 @@ func Route(s *gin.Engine) {
 		}
 		ctx.JSON(200, u)
 	})
-	s.GET("/download/:filepath", func(ctx *gin.Context) {
-		id, shouldReturn := check_login(ctx)
+	s.GET("/download/*filepath", func(ctx *gin.Context) {
+		id, path, shouldReturn := getIdAndPath(ctx)
 		if shouldReturn {
-			return
-		}
-		path := ctx.Param("filepath")
-		if path == "" {
-			ctx.String(404, "空 filepath")
 			return
 		}
 		filedb := new_fileDb()
@@ -155,14 +158,9 @@ func Route(s *gin.Engine) {
 
 		io.Copy(ctx.Writer, r)
 	})
-	s.GET("/delete/:filepath", func(ctx *gin.Context) {
-		id, shouldReturn := check_login(ctx)
+	s.GET("/delete/*filepath", func(ctx *gin.Context) {
+		id, path, shouldReturn := getIdAndPath(ctx)
 		if shouldReturn {
-			return
-		}
-		path := ctx.Param("filepath")
-		if path == "" {
-			ctx.String(404, "空 filepath")
 			return
 		}
 		filedb := new_fileDb()
@@ -175,6 +173,26 @@ func Route(s *gin.Engine) {
 
 		ctx.Redirect(303, "/")
 	})
+}
+
+func getIdAndPath(ctx *gin.Context) (id string, path string, shouldreutrn bool) {
+	id, shouldReturn := check_login(ctx)
+	if shouldReturn {
+		return "", "", true
+	}
+	path = ctx.Param("filepath")
+	if path == "" {
+		ctx.String(404, "空 filepath")
+		return "", "", true
+	}
+	path, err := url.PathUnescape(path)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "Invalid file path encoding: %v", err)
+		return "", "", true
+	}
+	path = strings.TrimSuffix(path, "/")
+	path = strings.TrimPrefix(path, "/")
+	return id, path, false
 }
 
 func update(ctx *gin.Context, field string, userid string) {
