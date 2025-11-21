@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "glob": "^11.0.3",
-    "rollup-plugin-critical": "^1.0.15",
+    "puppeteer": "^24.30.0",
     "vue": "^3.5.22"
   },
   "devDependencies": {
