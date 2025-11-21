@@ -16,10 +16,21 @@ let limit = ref("50Mb");
 let used = ref("0Mb");
 
 function fmt(v) {
-  if ((v / 1024 / 1024) < 1) {
-    return (v / 1024).toFixed(2) + "kb"
+  let value, unit;
+  
+  if (v < 1024 * 1024) {
+    value = v / 1024.0;
+    unit = "kb";
+  } else {
+    value = v / 1024.0 / 1024.0;
+    unit = "Mb";
   }
-  return (v / 1024 / 1024).toFixed(2) + "Mb"
+  
+  // 转换为字符串并去除不必要的零
+  const numStr = value.toFixed(6);
+  const cleanStr = numStr.replace(/\.?0+$/, '');
+  
+  return cleanStr + unit;
 }
 
 onMounted(() => {
@@ -29,7 +40,7 @@ onMounted(() => {
     data: "json",
     success: function (response) {
       console.log(response);
-      percent.value = (response.Used / response.Limit).toFixed(5) + "%";
+      percent.value = (response.Used / response.Limit*100).toFixed(5) + "%";
       limit.value = fmt(response.Limit);
       used.value = fmt(response.Used);
     },
