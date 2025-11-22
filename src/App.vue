@@ -1,6 +1,6 @@
 <script setup>
 import Nav from './components/nav.vue'
-import File from './components/file.vue'
+import All from './components/all.vue';
 </script>
 
 <template>
@@ -8,7 +8,7 @@ import File from './components/file.vue'
     <Nav></Nav>
   </header>
   <main class="container" style="background-color: #f8f9fa;">
-    <File></File>
+    <All></All>
   </main>
 
 </template>
