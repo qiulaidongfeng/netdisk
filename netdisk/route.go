@@ -49,6 +49,8 @@ func Route(s *gin.Engine) {
 		if err != http.ErrNoCookie {
 			_, err, _ := sessionControl.CheckLogined(ctx.ClientIP(), ctx.Request.UserAgent(), tmp)
 			if err != nil {
+				tmp.MaxAge = -1
+				http.SetCookie(ctx.Writer, tmp)
 				ctx.String(http.StatusUnauthorized, err.Error())
 				return
 			}
